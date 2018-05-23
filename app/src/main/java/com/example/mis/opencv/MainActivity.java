@@ -30,7 +30,6 @@ import java.io.OutputStream;
 
 // Sources: https://github.com/opencv/opencv/blob/master/samples/android/face-detection/src/org/opencv/samples/facedetect/FdActivity.java
 // and https://docs.opencv.org/3.4.1/d7/d8b/tutorial_py_face_detection.html
-// and https://github.com/crankdaworld/Android-OpenCV-FaceDetectionwithEyes/blob/master/OpenCV-Android-FaceDetect-Eye/FdEye/src/org/opencv/samples/fd/FdView.java
 
 public class MainActivity extends Activity implements CvCameraViewListener2 {
     private static final String TAG = "OCVSample::Activity";
@@ -38,10 +37,8 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     private static final Scalar NOSE_COLOR = new Scalar(255, 0, 0, 255);
 
     private CameraBridgeViewBase mOpenCvCameraView;
-    private CascadeClassifier    faceDetector;
-    private CascadeClassifier    noseDetector;
-    private float                mRelativeFaceSize   = 0.2f;
-    private int                  mAbsoluteFaceSize   = 0;
+    private CascadeClassifier faceDetector;
+    private int mAbsoluteFaceSize   = 0;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -49,7 +46,6 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
                 {
-                    Log.i(TAG, "OpenCV loaded successfully");
                     initDetection();
                     mOpenCvCameraView.enableView();
                 } break;
@@ -94,10 +90,8 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     {
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
         } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
     }
@@ -125,12 +119,11 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public Mat drawRedNose(Mat rgba, Mat gray) {
 
         MatOfRect faces = new MatOfRect();
-        MatOfRect noses = new MatOfRect();
 
         if (mAbsoluteFaceSize == 0) {
             int height = gray.rows();
-            if (Math.round(height * mRelativeFaceSize) > 0) {
-                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+            if (Math.round(height * 0.2f) > 0) {
+                mAbsoluteFaceSize = Math.round(height * 0.2f);
             }
         }
 
@@ -143,18 +136,9 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
             for (Rect face : facesArray) {
 
-                Rect roi = new Rect((int) face.tl().x, (int) (face.tl().y), face.width, (face.height));
-                Mat croppedGray = gray.submat(roi);
-                Mat croppedRGB = rgba.submat(roi);
-
-                noseDetector.detectMultiScale(croppedGray, noses, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
-
-                Rect[] nosesArray = noses.toArray();
-                    for (Rect nose : nosesArray) {
-                        Point center = new Point(nose.x + nose.width * 0.5, nose.y + nose.height * 0.33);
-                        int radius = (int) (nose.width * 0.26);
-                        Imgproc.circle(croppedRGB, center, radius, NOSE_COLOR, -1);
-                    }
+                Point center = new Point(face.x + face.width * 0.5, face.y + face.height * 0.6 );
+                int radius = (int) (face.width / 6.5);
+                Imgproc.circle(rgba, center, radius, NOSE_COLOR, -1);
                 }
             }
         return rgba;
@@ -163,7 +147,6 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public void initDetection(){
 
         faceDetector = new CascadeClassifier(initAssetFile("haarcascade_frontalface_default.xml"));
-        noseDetector = new CascadeClassifier(initAssetFile("haarcascade_mcs_nose.xml"));
 
     }
 
@@ -175,7 +158,6 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
             byte[] data = new byte[is.available()];
             is.read(data); os.write(data); is.close(); os.close();
         } catch (IOException e) { e.printStackTrace(); }
-        Log.d(TAG,"prepared local file: "+filename);
         return file.getAbsolutePath();
     }
 }
